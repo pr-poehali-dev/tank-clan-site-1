@@ -1,0 +1,1 @@
+UPDATE users SET role = 'admin', updated_at = NOW() WHERE id = 6;
