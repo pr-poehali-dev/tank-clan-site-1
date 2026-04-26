@@ -1396,6 +1396,210 @@ body,
   gap: 8px;
 }
 
+/* ── Clans Tab ── */
+.clans-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.clan-form {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.clan-form-title {
+  font-family: "Oswald", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent);
+}
+.clans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.clan-card {
+  background: var(--bg1);
+  border: 1px solid;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.clan-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.clan-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.clan-name {
+  font-family: "Oswald", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.clan-desc {
+  font-size: 11px;
+  color: var(--text2);
+}
+.clan-cmd {
+  font-size: 11px;
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+.clan-cnt {
+  font-family: "Oswald", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+.clan-id-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 10px;
+  border-top: 1px solid var(--border);
+}
+.clan-id-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.icon-opt {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.icon-opt:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.icon-opt.active {
+  border-color: var(--accent);
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--accent);
+}
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.color-opt {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.color-opt:hover {
+  transform: scale(1.15);
+}
+.color-opt.active {
+  border-color: #fff;
+  transform: scale(1.15);
+}
+
+.add-member-block {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 18px;
+  margin-top: 6px;
+}
+.add-member-title {
+  font-family: "Oswald", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: var(--accent);
+}
+.add-member-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.add-member-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.add-member-msg {
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: var(--r);
+}
+.add-member-msg.ok {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+.add-member-msg.err {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.members-table-wrap {
+  margin-top: 18px;
+}
+.members-table-title {
+  font-family: "Oswald", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text2);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
 /* ── Misc ── */
 .loading-pulse {
   text-align: center;

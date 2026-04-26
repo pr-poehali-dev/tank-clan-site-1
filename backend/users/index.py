@@ -115,5 +115,121 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'success': True})}
 
+    # GET ?action=companies — список рот с участниками (модератор+)
+    if method == 'GET' and action == 'companies':
+        if not is_mod:
+            conn.close()
+            return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Нет доступа'})}
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT c.id, c.name, c.description, c.icon, c.color, c.commander_id,
+                   u.username as commander_name, u.wot_nickname as commander_wot,
+                   COUNT(cm.id) as member_count
+            FROM companies c
+            LEFT JOIN users u ON u.id = c.commander_id
+            LEFT JOIN clan_members cm ON cm.company_id = c.id AND cm.is_active = true
+            GROUP BY c.id, u.username, u.wot_nickname ORDER BY c.id
+        """)
+        rows = cur.fetchall()
+        conn.close()
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps([{
+            'id': r[0], 'name': r[1], 'description': r[2], 'icon': r[3],
+            'color': r[4], 'commander_id': r[5], 'commander_name': r[6],
+            'commander_wot': r[7], 'member_count': r[8]
+        } for r in rows])}
+
+    # POST ?action=company_create — создать роту (admin)
+    if method == 'POST' and action == 'company_create':
+        if not is_admin:
+            conn.close()
+            return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Только администратор'})}
+        body = json.loads(event.get('body') or '{}')
+        name = body.get('name', '').strip()
+        description = body.get('description', '').strip()
+        icon = body.get('icon', 'Shield')
+        color = body.get('color', '#f97316')
+        if not name:
+            conn.close()
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите название роты'})}
+        cur = conn.cursor()
+        cur.execute("INSERT INTO companies (name, description, icon, color) VALUES (%s, %s, %s, %s) RETURNING id",
+            (name, description or None, icon, color))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        return {'statusCode': 201, 'headers': CORS, 'body': json.dumps({'id': new_id, 'name': name})}
+
+    # PUT ?action=company_update — редактировать роту (admin)
+    if method == 'PUT' and action == 'company_update':
+        if not is_admin:
+            conn.close()
+            return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Только администратор'})}
+        body = json.loads(event.get('body') or '{}')
+        cid = body.get('company_id')
+        name = body.get('name', '').strip()
+        description = body.get('description', '').strip()
+        icon = body.get('icon', 'Shield')
+        color = body.get('color', '#f97316')
+        commander_id = body.get('commander_id')
+        if not cid or not name:
+            conn.close()
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите company_id и название'})}
+        cur = conn.cursor()
+        cur.execute("UPDATE companies SET name=%s, description=%s, icon=%s, color=%s, commander_id=%s WHERE id=%s",
+            (name, description or None, icon, color, commander_id or None, int(cid)))
+        conn.commit()
+        conn.close()
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'success': True})}
+
+    # POST ?action=add_member — добавить участника по user_id (admin/mod)
+    if method == 'POST' and action == 'add_member':
+        if not is_mod:
+            conn.close()
+            return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Нет доступа'})}
+        body = json.loads(event.get('body') or '{}')
+        target_id = body.get('user_id')
+        company_id = body.get('company_id')
+        in_game_role = body.get('in_game_role', 'Боец')
+        if not target_id or not company_id:
+            conn.close()
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите user_id и company_id'})}
+        cur = conn.cursor()
+        # Проверяем что пользователь существует
+        cur.execute("SELECT id, username, wot_nickname FROM users WHERE id=%s AND is_active=true", (int(target_id),))
+        urow = cur.fetchone()
+        if not urow:
+            conn.close()
+            return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': f'Пользователь #{target_id} не найден или неактивен'})}
+        # Снимаем старую роту
+        cur.execute("UPDATE clan_members SET is_active=false WHERE user_id=%s", (int(target_id),))
+        cur.execute("INSERT INTO clan_members (user_id, company_id, in_game_role) VALUES (%s,%s,%s)",
+            (int(target_id), int(company_id), in_game_role))
+        # Создаём запись статистики если нет
+        cur.execute("SELECT id FROM player_stats WHERE user_id=%s", (int(target_id),))
+        if not cur.fetchone():
+            cur.execute("INSERT INTO player_stats (user_id) VALUES (%s)", (int(target_id),))
+        conn.commit()
+        conn.close()
+        return {'statusCode': 201, 'headers': CORS, 'body': json.dumps({
+            'success': True, 'user_id': int(target_id),
+            'username': urow[1], 'wot_nickname': urow[2]
+        })}
+
+    # PUT ?action=remove_member — убрать участника из роты (admin/mod)
+    if method == 'PUT' and action == 'remove_member':
+        if not is_mod:
+            conn.close()
+            return {'statusCode': 403, 'headers': CORS, 'body': json.dumps({'error': 'Нет доступа'})}
+        body = json.loads(event.get('body') or '{}')
+        target_id = body.get('user_id')
+        if not target_id:
+            conn.close()
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'Укажите user_id'})}
+        cur = conn.cursor()
+        cur.execute("UPDATE clan_members SET is_active=false WHERE user_id=%s", (int(target_id),))
+        conn.commit()
+        conn.close()
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'success': True})}
+
     conn.close()
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Не найдено'})}

@@ -495,8 +495,279 @@ function NewsSection({ user }: { user: AuthUser }) {
   );
 }
 
+// ─── Clans Tab ───────────────────────────────────────────────────────────────
+interface CompanyAdmin {
+  id: number; name: string; description?: string;
+  icon: string; color: string; commander_id?: number;
+  commander_name?: string; commander_wot?: string; member_count: number;
+}
+
+const COMPANY_COLORS = ["#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#a855f7","#ec4899","#14b8a6"];
+const COMPANY_ICONS  = ["Shield","Sword","Target","Star","Crown","Flame","Zap","Flag","Crosshair","Layers"];
+
+function ClansTab({ user, notify, users }: {
+  user: AuthUser;
+  notify: (t: string, ok?: boolean) => void;
+  users: Player[];
+}) {
+  const [companies, setCompanies] = useState<CompanyAdmin[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [editCo, setEditCo] = useState<CompanyAdmin | null>(null);
+  const [form, setForm] = useState({ name: "", description: "", icon: "Shield", color: "#f97316", commander_id: "" });
+  const [addForm, setAddForm] = useState({ userId: "", companyId: "", inGameRole: "Боец" });
+  const [addMsg, setAddMsg] = useState("");
+  const isAdmin = user.role === "admin";
+
+  const load = useCallback(() => {
+    fetch(API.users + "?action=companies", { headers: { "X-User-Id": String(user.id), "X-Auth-Token": user.token } })
+      .then(r => r.json()).then(d => { if (Array.isArray(d)) setCompanies(d); });
+  }, [user]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function createCompany(e: React.FormEvent) {
+    e.preventDefault();
+    const r = await fetch(API.users + "?action=company_create", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-User-Id": String(user.id), "X-Auth-Token": user.token },
+      body: JSON.stringify({ name: form.name, description: form.description, icon: form.icon, color: form.color }),
+    });
+    const d = await r.json();
+    if (d.id) { notify(`Рота «${form.name}» создана ✓`); setShowCreate(false); setForm({ name: "", description: "", icon: "Shield", color: "#f97316", commander_id: "" }); load(); }
+    else notify(d.error || "Ошибка", false);
+  }
+
+  async function updateCompany(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editCo) return;
+    const r = await fetch(API.users + "?action=company_update", {
+      method: "PUT", headers: { "Content-Type": "application/json", "X-User-Id": String(user.id), "X-Auth-Token": user.token },
+      body: JSON.stringify({ company_id: editCo.id, name: form.name, description: form.description, icon: form.icon, color: form.color, commander_id: form.commander_id ? parseInt(form.commander_id) : null }),
+    });
+    const d = await r.json();
+    if (d.success) { notify("Рота обновлена ✓"); setEditCo(null); load(); }
+    else notify(d.error || "Ошибка", false);
+  }
+
+  async function addMember(e: React.FormEvent) {
+    e.preventDefault();
+    setAddMsg("");
+    if (!addForm.userId || !addForm.companyId) { setAddMsg("Заполните ID игрока и выберите роту"); return; }
+    const r = await fetch(API.users + "?action=add_member", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-User-Id": String(user.id), "X-Auth-Token": user.token },
+      body: JSON.stringify({ user_id: parseInt(addForm.userId), company_id: parseInt(addForm.companyId), in_game_role: addForm.inGameRole }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      notify(`${d.wot_nickname || d.username} добавлен в роту ✓`);
+      setAddMsg(`✓ Добавлен: ${d.wot_nickname || d.username} (ID ${d.user_id})`);
+      setAddForm(f => ({ ...f, userId: "" }));
+      load();
+    } else {
+      setAddMsg(d.error || "Ошибка");
+      notify(d.error || "Ошибка", false);
+    }
+  }
+
+  async function removeMember(uid: number, name: string) {
+    const r = await fetch(API.users + "?action=remove_member", {
+      method: "PUT", headers: { "Content-Type": "application/json", "X-User-Id": String(user.id), "X-Auth-Token": user.token },
+      body: JSON.stringify({ user_id: uid }),
+    });
+    const d = await r.json();
+    if (d.success) { notify(`${name} удалён из роты ✓`); load(); }
+  }
+
+  const startEdit = (co: CompanyAdmin) => {
+    setEditCo(co);
+    setForm({ name: co.name, description: co.description || "", icon: co.icon, color: co.color, commander_id: co.commander_id ? String(co.commander_id) : "" });
+    setShowCreate(false);
+  };
+
+  return (
+    <div>
+      {/* Список рот */}
+      <div className="clans-header">
+        <div className="roles-info" style={{ flex: 1 }}>
+          <Icon name="Layers3" size={15} fallback="Layers" />
+          Управление ротами клана. Создавайте роты и добавляйте участников по их ID.
+        </div>
+        {isAdmin && (
+          <button className="sf-btn-primary" onClick={() => { setShowCreate(!showCreate); setEditCo(null); }}>
+            <Icon name="Plus" size={14} fallback="Plus" /> Создать роту
+          </button>
+        )}
+      </div>
+
+      {/* Форма создания */}
+      {showCreate && isAdmin && (
+        <form className="clan-form" onSubmit={createCompany}>
+          <div className="clan-form-title"><Icon name="Plus" size={16} fallback="Plus" /> Новая рота</div>
+          <div className="form-row">
+            <div className="field-group"><label>Название роты</label><input className="sf-input" placeholder="Альфа" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
+            <div className="field-group"><label>Описание</label><input className="sf-input" placeholder="Ударный отряд..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+          </div>
+          <div className="field-group"><label>Иконка</label>
+            <div className="icon-picker">
+              {COMPANY_ICONS.map(ic => (
+                <button key={ic} type="button" className={`icon-opt ${form.icon === ic ? "active" : ""}`} onClick={() => setForm(f => ({ ...f, icon: ic }))}>
+                  <Icon name={ic} size={16} fallback="Shield" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field-group"><label>Цвет роты</label>
+            <div className="color-picker">
+              {COMPANY_COLORS.map(c => (
+                <button key={c} type="button" className={`color-opt ${form.color === c ? "active" : ""}`}
+                  style={{ background: c, borderColor: form.color === c ? "#fff" : "transparent" }}
+                  onClick={() => setForm(f => ({ ...f, color: c }))} />
+              ))}
+            </div>
+          </div>
+          <div className="form-actions">
+            <button className="sf-btn-primary" type="submit">Создать</button>
+            <button className="sf-btn-ghost" type="button" onClick={() => setShowCreate(false)}>Отмена</button>
+          </div>
+        </form>
+      )}
+
+      {/* Форма редактирования */}
+      {editCo && isAdmin && (
+        <form className="clan-form" onSubmit={updateCompany}>
+          <div className="clan-form-title"><Icon name="Edit" size={16} fallback="Edit" /> Редактировать: {editCo.name}</div>
+          <div className="form-row">
+            <div className="field-group"><label>Название</label><input className="sf-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
+            <div className="field-group"><label>Описание</label><input className="sf-input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+          </div>
+          <div className="field-group"><label>Командир (ID пользователя)</label>
+            <select className="sf-input sf-select" value={form.commander_id} onChange={e => setForm(f => ({ ...f, commander_id: e.target.value }))}>
+              <option value="">— Без командира —</option>
+              {users.filter(u => u.is_active !== false).map(u => (
+                <option key={u.id} value={u.id}>{u.wot_nickname || u.username} (ID:{u.id})</option>
+              ))}
+            </select>
+          </div>
+          <div className="field-group"><label>Иконка</label>
+            <div className="icon-picker">
+              {COMPANY_ICONS.map(ic => (
+                <button key={ic} type="button" className={`icon-opt ${form.icon === ic ? "active" : ""}`} onClick={() => setForm(f => ({ ...f, icon: ic }))}>
+                  <Icon name={ic} size={16} fallback="Shield" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field-group"><label>Цвет</label>
+            <div className="color-picker">
+              {COMPANY_COLORS.map(c => (
+                <button key={c} type="button" className={`color-opt ${form.color === c ? "active" : ""}`}
+                  style={{ background: c, borderColor: form.color === c ? "#fff" : "transparent" }}
+                  onClick={() => setForm(f => ({ ...f, color: c }))} />
+              ))}
+            </div>
+          </div>
+          <div className="form-actions">
+            <button className="sf-btn-primary" type="submit">Сохранить</button>
+            <button className="sf-btn-ghost" type="button" onClick={() => setEditCo(null)}>Отмена</button>
+          </div>
+        </form>
+      )}
+
+      {/* Карточки рот */}
+      <div className="clans-grid">
+        {companies.map(co => (
+          <div key={co.id} className="clan-card" style={{ borderColor: co.color }}>
+            <div className="clan-card-head">
+              <div className="clan-icon" style={{ background: co.color + "22", color: co.color }}>
+                <Icon name={co.icon} size={20} fallback="Shield" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="clan-name">{co.name}</div>
+                {co.description && <div className="clan-desc">{co.description}</div>}
+                {co.commander_name && <div className="clan-cmd"><Icon name="Crown" size={11} fallback="Star" /> {co.commander_wot || co.commander_name}</div>}
+              </div>
+              <div className="clan-cnt" style={{ color: co.color }}>{co.member_count}</div>
+              {isAdmin && (
+                <button className="tbl-btn blue" title="Редактировать" onClick={() => startEdit(co)}>
+                  <Icon name="Edit" size={13} fallback="Edit" />
+                </button>
+              )}
+            </div>
+            <div className="clan-id-row">
+              <span className="clan-id-badge">ID роты: {co.id}</span>
+              <span style={{ fontSize: 11, color: "var(--text3)" }}>{co.member_count} участников</span>
+            </div>
+          </div>
+        ))}
+        {companies.length === 0 && <div className="empty-state"><Icon name="Layers" size={34} fallback="Layers" /><p>Нет рот</p></div>}
+      </div>
+
+      {/* Добавление участника по ID */}
+      <div className="add-member-block">
+        <div className="add-member-title"><Icon name="UserPlus" size={17} fallback="UserPlus" /> Добавить игрока в роту по ID</div>
+        <form className="add-member-form" onSubmit={addMember}>
+          <div className="add-member-row">
+            <div className="field-group" style={{ flex: "0 0 130px" }}>
+              <label>ID игрока</label>
+              <input className="sf-input" type="number" min={1} placeholder="Напр. 7" value={addForm.userId}
+                onChange={e => setAddForm(f => ({ ...f, userId: e.target.value }))} required />
+            </div>
+            <div className="field-group" style={{ flex: 1 }}>
+              <label>Рота</label>
+              <select className="sf-input sf-select" value={addForm.companyId} onChange={e => setAddForm(f => ({ ...f, companyId: e.target.value }))} required>
+                <option value="">— Выберите роту —</option>
+                {companies.map(co => <option key={co.id} value={co.id}>«{co.name}» (ID:{co.id})</option>)}
+              </select>
+            </div>
+            <div className="field-group" style={{ flex: 1 }}>
+              <label>Должность</label>
+              <select className="sf-input sf-select" value={addForm.inGameRole} onChange={e => setAddForm(f => ({ ...f, inGameRole: e.target.value }))}>
+                {["Командир","Заместитель","Боец","Разведчик","Артиллерист","Новобранец"].map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <button className="sf-btn-primary" type="submit" style={{ alignSelf: "flex-end" }}>
+              <Icon name="UserPlus" size={14} fallback="Plus" /> Добавить
+            </button>
+          </div>
+          {addMsg && <div className={`add-member-msg ${addMsg.startsWith("✓") ? "ok" : "err"}`}>{addMsg}</div>}
+        </form>
+
+        {/* Таблица текущих участников */}
+        <div className="members-table-wrap">
+          <div className="members-table-title">Текущие участники по ротам</div>
+          {users.filter(u => u.company_name && u.is_active !== false).length === 0
+            ? <div className="empty-small">Нет распределённых участников</div>
+            : (
+            <table className="admin-table" style={{ marginTop: 0 }}>
+              <thead><tr><th>ID</th><th>Игрок</th><th>WoT ник</th><th>Рота</th><th>Должность</th><th>Действие</th></tr></thead>
+              <tbody>
+                {users.filter(u => u.company_name && u.is_active !== false).map(u => (
+                  <tr key={u.id}>
+                    <td><span className="clan-id-badge">#{u.id}</span></td>
+                    <td><div className="tbl-player">
+                      <div className="tbl-av" style={{ width: 26, height: 26, fontSize: 11, background: "linear-gradient(135deg,#6366f1,#4338ca)" }}>{u.username[0].toUpperCase()}</div>
+                      {u.username}
+                    </div></td>
+                    <td>{u.wot_nickname || <span className="dim">—</span>}</td>
+                    <td><span style={{ color: "var(--accent)", fontWeight: 600 }}>{u.company_name}</span></td>
+                    <td>{u.in_game_role || "—"}</td>
+                    <td>
+                      <button className="tbl-btn red" title="Убрать из роты" onClick={() => removeMember(u.id, u.wot_nickname || u.username)}>
+                        <Icon name="UserX" size={13} fallback="X" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-type AdminTab = "users" | "roles" | "stats" | "companies" | "moderation";
+type AdminTab = "users" | "roles" | "stats" | "companies" | "moderation" | "clans";
 
 function AdminSection({ user }: { user: AuthUser }) {
   const [tab, setTab] = useState<AdminTab>("users");
@@ -554,9 +825,10 @@ function AdminSection({ user }: { user: AuthUser }) {
 
   const TABS: { key: AdminTab; label: string; icon: string }[] = [
     { key: "users",      label: "Участники",   icon: "Users" },
+    { key: "clans",      label: "Кланы/Роты",  icon: "Layers3" },
     { key: "roles",      label: "Роли",         icon: "ShieldCheck" },
     { key: "stats",      label: "Статистика",   icon: "BarChart2" },
-    { key: "companies",  label: "Роты",         icon: "Layers" },
+    { key: "companies",  label: "Состав",       icon: "Layers" },
     { key: "moderation", label: "Модерация",    icon: "Gavel" },
   ];
 
@@ -661,6 +933,9 @@ function AdminSection({ user }: { user: AuthUser }) {
           </div>
         )
       )}
+
+      {/* === TAB: CLANS === */}
+      {tab === "clans" && <ClansTab user={user} notify={notify} users={users} />}
 
       {/* === TAB: ROLES === */}
       {tab === "roles" && (
