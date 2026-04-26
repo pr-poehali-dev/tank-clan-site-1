@@ -1,0 +1,1 @@
+CREATE TABLE chat_messages (id SERIAL PRIMARY KEY, user_id INT, username VARCHAR(50) NOT NULL, user_role VARCHAR(20) NOT NULL DEFAULT 'user', wot_nickname VARCHAR(50), content TEXT, file_url TEXT, file_name VARCHAR(255), file_type VARCHAR(50), hidden BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW());

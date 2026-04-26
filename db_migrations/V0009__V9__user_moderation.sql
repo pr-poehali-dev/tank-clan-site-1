@@ -1,0 +1,1 @@
+CREATE TABLE user_moderation (id SERIAL PRIMARY KEY, user_id INT, action VARCHAR(20) NOT NULL, reason TEXT, moderator_id INT, expires_at TIMESTAMPTZ, is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW());
