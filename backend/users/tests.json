@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Users list forbidden without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 403,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

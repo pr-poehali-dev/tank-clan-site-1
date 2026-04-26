@@ -1,0 +1,1 @@
+CREATE TABLE player_stats (id SERIAL PRIMARY KEY, user_id INT REFERENCES users(id), battles INT DEFAULT 0, wins INT DEFAULT 0, losses INT DEFAULT 0, draws INT DEFAULT 0, winrate NUMERIC(5,2) DEFAULT 0.00, avg_damage INT DEFAULT 0, avg_xp INT DEFAULT 0, frags INT DEFAULT 0, rating INT DEFAULT 0, updated_at TIMESTAMPTZ DEFAULT NOW());

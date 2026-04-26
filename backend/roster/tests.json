@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Get roster",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

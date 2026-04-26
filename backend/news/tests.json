@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Get news list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

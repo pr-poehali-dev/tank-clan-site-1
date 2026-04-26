@@ -1,0 +1,1 @@
+CREATE TABLE news (id SERIAL PRIMARY KEY, title VARCHAR(255) NOT NULL, content TEXT NOT NULL, category VARCHAR(50) DEFAULT 'general', source VARCHAR(100) DEFAULT 'редакция', image_url TEXT, is_published BOOLEAN DEFAULT true, author_id INT REFERENCES users(id), created_at TIMESTAMPTZ DEFAULT NOW());

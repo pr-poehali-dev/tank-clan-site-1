@@ -1,0 +1,1 @@
+CREATE TABLE companies (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, description TEXT, icon VARCHAR(20) DEFAULT 'sword', color VARCHAR(20) DEFAULT '#f97316', commander_id INT REFERENCES users(id), created_at TIMESTAMPTZ DEFAULT NOW());

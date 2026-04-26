@@ -1,0 +1,1 @@
+CREATE TABLE clan_members (id SERIAL PRIMARY KEY, user_id INT REFERENCES users(id), company_id INT REFERENCES companies(id), in_game_role VARCHAR(50) DEFAULT 'Боец', joined_at DATE DEFAULT CURRENT_DATE, is_active BOOLEAN DEFAULT true, notes TEXT);
